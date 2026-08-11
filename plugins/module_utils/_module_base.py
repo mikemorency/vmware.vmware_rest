@@ -89,7 +89,9 @@ class VmwareRestModuleBase(ABC):
         return response.json
 
     def _get_moid_attribute_value_from_resource(self, resource):
-        for moid_parameter_hint in self.moid_parameter_hints:
+        # check the last hint first, since that is usually the last parameter from the
+        # URI (for example "/vcenter/vm/{vm}/hardware/floppy/{floppy}")
+        for moid_parameter_hint in reversed(self.moid_parameter_hints):
             moid_value = resource.get(moid_parameter_hint)
             if moid_value:
                 return moid_value

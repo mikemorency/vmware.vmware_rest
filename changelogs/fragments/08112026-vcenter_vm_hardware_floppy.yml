@@ -1,0 +1,2 @@
+minor_changes:
+  - vcenter_vm_hardware_floppy_info - The non-operational ``label`` parameter has been removed. This parameter was accepted but never used by the vSphere API as an input.
