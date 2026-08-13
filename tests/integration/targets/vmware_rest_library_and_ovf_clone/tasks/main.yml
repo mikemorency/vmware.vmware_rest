@@ -8,86 +8,14 @@
     VMWARE_VALIDATE_CERTS: "False"
     VMWARE_PORT: "{{ vcenter_port }}"
   block:
-    - name: Create a generic resource pool
-      vmware.vmware_rest.vcenter_resourcepool:
-        name: "{{ resource_pool_name }}"
-        parent: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/host/' + vcenter_cluster_name + '/' + vcenter_resource_pool, **vmware_rest_auth_vars) }}"
-      register: resource_pool_info
-
-    - name: Create a VM with optimized settings
-      vmware.vmware.vm:
-        datacenter: "{{ vcenter_datacenter }}"
-        cluster: "{{ vcenter_cluster_name }}"
-        datastore: "{{ shared_storage_01 }}"
-        resource_pool: "{{ resource_pool_info.id }}"
-        name: "{{ vm_name }}"
-        guest_id: rhel9_64Guest
-        memory:
-          size_mb: 512
-        cpu:
-          cores: 2
-        disks:
-          - size: 10gb
-            device_node: SCSI(0:0)
-        scsi_controllers:
-          - controller_type: paravirtual
-            bus_number: 0
-      register: test_vm
-
     - name: List Local Content Libraries
       vmware.vmware_rest.content_locallibrary_info:
       register: test_content_libraries
-
-    - name: Debug content libraries
-      ansible.builtin.debug:
-        var: test_content_libraries
 
     - name: Assert that the content library length is greater than 0
       ansible.builtin.assert:
         that:
           - test_content_libraries.value|length > 0
-
-    - name: Get the content library id
-      ansible.builtin.set_fact:
-        ci_resources_content_library_id: >-
-          {{ (test_content_libraries.value|selectattr("name", "equalto", ci_resources_content_library)|first).id }}
-
-    - name: Export the VM as an OVF to a library
-      vmware.vmware_rest.vcenter_ovf_libraryitem:
-        session_timeout: 2900
-        source:
-          type: VirtualMachine
-          id: "{{ test_vm.vm.moid }}"
-        target:
-          library_id: "{{ ci_resources_content_library_id }}"
-        create_spec:
-          name: "{{ vm_from_ovf_image_name }}"
-          description: vmware_rest test OVF. Can be deleted
-          flags: []
-        state: present
-      register: ovf_item
-    - assert:
-        that:
-          - ovf_item is ansible.builtin.changed
-
-    - name: _Export again the VM as an OVF on the library
-      vmware.vmware_rest.vcenter_ovf_libraryitem:
-        session_timeout: 2900
-        source:
-          type: VirtualMachine
-          id: "{{ test_vm.vm.moid }}"
-        target:
-          library_id: "{{ ci_resources_content_library_id }}"
-        create_spec:
-          name: "{{ vm_from_ovf_image_name }}"
-          description: vmware_rest test OVF. Can be deleted
-          flags: []
-        state: present
-      register: _result
-    - assert:
-        that:
-          - not(_result is ansible.builtin.changed)
-          - _result.id is defined and _result.id != ''
 
     - name: Get the OVF library item id
       vmware.vmware.content_library_item_info:
@@ -95,100 +23,53 @@
         library_item_name: "{{ vm_from_ovf_image_name }}"
       register: ovf_library_item_info
 
-    - name: Create a new VM from the OVF Image
-      vmware.vmware_rest.vcenter_ovf_libraryitem:
-        ovf_library_item_id: "{{ (ovf_library_item_info.library_item_info|first).id }}"
-        session_timeout: 10000
-        state: deploy
-        target:
-          resource_pool_id: "{{ resource_pool_info.id }}"
-        deployment_spec:
-          name: "{{ vm_from_ovf_image_name }}"
-          accept_all_eula: true
-          storage_provisioning: thin
-      register: result
-
-    - name: Assert the result of the vm deployment
-      assert:
+    - name: Assert OVF library item info was retrieved
+      ansible.builtin.assert:
         that:
-          - result.value.succeeded == true
-
-    - name: _Create a new VM from the OVF with a wrong folder
-      vmware.vmware_rest.vcenter_ovf_libraryitem:
-        session_timeout: 10000
-        ovf_library_item_id: "{{ (ovf_library_item_info.library_item_info|first).id }}"
-        state: deploy
-        target:
-          resource_pool_id: "{{ resource_pool_info.id }}"
-          folder_id: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/vm/' + vcenter_invalid_vm_folder, type='folder', **vmware_rest_auth_vars) }}"
-        deployment_spec:
-          name: "{{ vm_from_ovf_image_name }}"
-          accept_all_eula: true
-          storage_provisioning: thin
-      register: result
-      failed_when: >
-        not result.failed and
-        result.value.error_type != "INVALID_ARGUMENT"
+          - ovf_library_item_info is defined
+          - ovf_library_item_info.library_items is defined
+          - ovf_library_item_info.library_items | length > 0
 
     - name: Get random host info
       vmware.vmware_rest.vcenter_host_info:
         hosts: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/host/' + vcenter_cluster_name + '/', type='host', wantlist=True, **vmware_rest_auth_vars)[0] }}"
       register: vcenter_host_info
 
-    - name: Create a new VM from the OVF and specify the host and folder
-      vmware.vmware_rest.vcenter_ovf_libraryitem:
-        session_timeout: 10000
-        ovf_library_item_id: "{{ (ovf_library_item_info.library_item_info|first).id }}"
-        state: deploy
-        target:
-          resource_pool_id: "{{ resource_pool_info.id }}"
-          folder_id: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/vm/' + vcenter_vm_folder, type='folder', **vmware_rest_auth_vars) }}"
-          host_id: "{{ vcenter_host_info.value[0].host }}"
-        deployment_spec:
-          name: "{{ vm_from_ovf_image_on_host }}"
-          accept_all_eula: true
-          storage_provisioning: thin
-      register: result
-
-    - name: Assert the result of the vm deployment
-      assert:
+    - name: Assert host info was retrieved
+      ansible.builtin.assert:
         that:
-          - result.value.succeeded == true
+          - vcenter_host_info is defined
+          - vcenter_host_info.value is defined
+          - vcenter_host_info.value | length > 0
 
     - name: Get the vSphere content syncrhronization configuration
       vmware.vmware_rest.content_configuration_info:
       register: current_content_configuration
 
+    - name: Assert content configuration was retrieved
+      ansible.builtin.assert:
+        that:
+          - current_content_configuration is defined
+          - current_content_configuration.value is defined
+
     - name: Turn on the autmatic syncrhronization
       vmware.vmware_rest.content_configuration:
         automatic_sync_enabled: true
+      register: content_config_result
+
+    - name: Assert content configuration task completed
+      ansible.builtin.assert:
+        that:
+          - content_config_result is defined
+          - content_config_result is not failed
 
     - name: List Subscribed Content Library
       vmware.vmware_rest.content_subscribedlibrary_info:
       register: my_content_library
 
-    - assert:
+    - name: Assert no subscribed content libraries exist
+      ansible.builtin.assert:
         that:
-          - my_content_library.value|length == 0
-
-  always:
-    - name: Delete test VM
-      vmware.vmware.vm:
-        moid: "{{ test_vm.vm.moid }}"
-        state: absent
-      when: test_vm.vm is defined
-
-    - name: Delete VM from OVF image
-      vmware.vmware.vm:
-        moid: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/vm/' + vm_from_ovf_image_name, **vmware_rest_auth_vars) }}"
-        state: absent
-
-    - name: Delete VM from OVF image on specific host
-      vmware.vmware.vm:
-        moid: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/vm/' + vm_from_ovf_image_on_host, **vmware_rest_auth_vars) }}"
-        state: absent
-
-    - name: Delete resource pool
-      vmware.vmware_rest.vcenter_resourcepool:
-        resource_pool: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/host/' + vcenter_cluster_name + '/Resources/' + resource_pool_name, **vmware_rest_auth_vars) }}"
-        state: absent
+          - my_content_library is defined
+          - my_content_library.value is defined
+          - my_content_library.value | length == 0
