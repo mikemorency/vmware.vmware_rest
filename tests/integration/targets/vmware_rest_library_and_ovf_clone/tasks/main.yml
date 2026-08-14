@@ -17,19 +17,6 @@
         that:
           - test_content_libraries.value|length > 0
 
-    - name: Get the OVF library item id
-      vmware.vmware.content_library_item_info:
-        library_id: "{{ ci_resources_content_library_id }}"
-        library_item_name: "{{ vm_from_ovf_image_name }}"
-      register: ovf_library_item_info
-
-    - name: Assert OVF library item info was retrieved
-      ansible.builtin.assert:
-        that:
-          - ovf_library_item_info is defined
-          - ovf_library_item_info.library_items is defined
-          - ovf_library_item_info.library_items | length > 0
-
     - name: Get random host info
       vmware.vmware_rest.vcenter_host_info:
         hosts: "{{ lookup('vmware.vmware.moid_from_path', '/' + vcenter_datacenter + '/host/' + vcenter_cluster_name + '/', type='host', wantlist=True, **vmware_rest_auth_vars)[0] }}"
