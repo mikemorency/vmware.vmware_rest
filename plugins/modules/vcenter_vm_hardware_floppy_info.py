@@ -27,6 +27,11 @@ description:
 author:
   - Ansible Eco Content Team (@eco-ansible-content)
 
+deprecated:
+  removed_in: 6.0.0
+  why: Floppy drives are legacy hardware no longer commonly used
+  alternative: Use modern storage options or M(vmware.vmware.vm) for comprehensive hardware management.
+
 extends_documentation_fragment:
   - vmware.vmware_rest.connection_params
 

@@ -90,6 +90,17 @@ action_groups:
 
 plugin_routing:
   modules:
+    vcenter_vm_hardware_floppy:
+      deprecation:
+        removal_version: 6.0.0
+        warning_text: Floppy drives are legacy hardware. Use modern storage options or vmware.vmware.vm instead.
+
+    vcenter_vm_hardware_floppy_info:
+      deprecation:
+        removal_version: 6.0.0
+        warning_text: Floppy drives are legacy hardware. Use modern storage options or vmware.vmware.vm instead.
+
+    # tombstones
     appliance_access_consolecli:
       tombstone:
         removal_version: 5.0.0
