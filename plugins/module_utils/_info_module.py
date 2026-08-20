@@ -41,20 +41,26 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
                 resource = []
             elif not isinstance(resource, list):
                 resource = [resource]
-            return self.normalize_info_results(query_results=resource)
+            return self.normalize_info_results(
+                query_results=resource,
+                single_resource=(len(resource) <= 1)
+            )
         except RequiredPathParameterError:
             if self.list_operation_config is None:
                 raise
 
         # Fall through to list operation when GET requires a path parameter we don't have
-        return self.normalize_info_results(query_results=self._list_resource_details())
+        return self.normalize_info_results(
+            query_results=self._list_resource_details(),
+            single_resource=(self.get_operation_config is None)
+        )
 
     def _list_resource_details(self) -> list:
         result = []
         http_method = getattr(self.client, self.get_operation_config.http_method)
         for resource in self._perform_list_operation():
             path = self.get_operation_config.build_path(
-                params={**self.params, **resource}
+                params={**self.params, **resource},
             )
             response = http_method(path)
             if not response:
@@ -72,7 +78,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
             result.append({**resource, **response.json})
         return result
 
-    def normalize_info_results(self, query_results: list) -> dict:
+    def normalize_info_results(self, query_results: list, single_resource: bool) -> dict:
         """
         Takes a query result from an INFO module query, and formats it
         to be consistent with expected INFO module outputs.
@@ -91,7 +97,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
 
         results = {"info": query_results}
 
-        if len(query_results) <= 1:
+        if single_resource:
             results["value"] = query_results[0] if query_results else {}
             if query_results:
                 resource_id = self._get_moid_attribute_value_from_resource(
