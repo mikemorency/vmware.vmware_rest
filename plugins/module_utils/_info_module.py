@@ -42,8 +42,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
             elif not isinstance(resource, list):
                 resource = [resource]
             return self.normalize_info_results(
-                query_results=resource,
-                single_resource=(len(resource) <= 1)
+                query_results=resource, single_resource=(len(resource) <= 1)
             )
         except RequiredPathParameterError:
             if self.list_operation_config is None:
@@ -52,7 +51,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         # Fall through to list operation when GET requires a path parameter we don't have
         return self.normalize_info_results(
             query_results=self._list_resource_details(),
-            single_resource=(self.get_operation_config is None)
+            single_resource=(self.get_operation_config is None),
         )
 
     def _list_resource_details(self) -> list:
@@ -78,7 +77,9 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
             result.append({**resource, **response.json})
         return result
 
-    def normalize_info_results(self, query_results: list, single_resource: bool) -> dict:
+    def normalize_info_results(
+        self, query_results: list, single_resource: bool
+    ) -> dict:
         """
         Takes a query result from an INFO module query, and formats it
         to be consistent with expected INFO module outputs.
