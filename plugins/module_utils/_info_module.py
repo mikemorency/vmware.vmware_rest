@@ -36,9 +36,13 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         """
         try:
             resource = self._perform_get_operation()
+            # force results into a list
+            if not resource:
+                resource = []
+            elif not isinstance(resource, list):
+                resource = [resource]
             return self.normalize_info_results(
-                query_results=[resource] if resource else [],
-                single_resource=True,
+                query_results=resource, single_resource=(len(resource) <= 1)
             )
         except RequiredPathParameterError:
             if self.list_operation_config is None:
@@ -47,7 +51,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         # Fall through to list operation when GET requires a path parameter we don't have
         return self.normalize_info_results(
             query_results=self._list_resource_details(),
-            single_resource=False,
+            single_resource=(self.get_operation_config is None),
         )
 
     def _list_resource_details(self) -> list:
@@ -55,7 +59,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         http_method = getattr(self.client, self.get_operation_config.http_method)
         for resource in self._perform_list_operation():
             path = self.get_operation_config.build_path(
-                params={**self.params, **resource}
+                params={**self.params, **resource},
             )
             response = http_method(path)
             if not response:
@@ -74,7 +78,7 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         return result
 
     def normalize_info_results(
-        self, query_results: list, single_resource: bool = False
+        self, query_results: list, single_resource: bool
     ) -> dict:
         """
         Takes a query result from an INFO module query, and formats it

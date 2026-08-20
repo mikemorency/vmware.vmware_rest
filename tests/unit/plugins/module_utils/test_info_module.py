@@ -72,8 +72,9 @@ def test_info_module_initialization(info_module):
 
 
 def test_normalize_info_results_single_resource_get(info_module):
+    # With auto-detection: 1 item is treated as single resource
     query_results = [{"resource_pool": "pool-1", "name": "my_pool"}]
-    result = info_module.normalize_info_results(query_results, single_resource=True)
+    result = info_module.normalize_info_results(query_results)
 
     assert result["id"] == "pool-1"
     assert result["value"] == {"resource_pool": "pool-1", "name": "my_pool"}
@@ -81,11 +82,12 @@ def test_normalize_info_results_single_resource_get(info_module):
 
 
 def test_normalize_info_results_single_resource_list(info_module):
+    # With auto-detection: 1 item is treated as single resource (value is dict, not list)
     query_results = [{"resource_pool": "pool-1", "name": "my_pool"}]
-    result = info_module.normalize_info_results(query_results, single_resource=False)
+    result = info_module.normalize_info_results(query_results)
 
-    assert "id" not in result
-    assert result["value"] == [{"resource_pool": "pool-1", "name": "my_pool"}]
+    assert result["id"] == "pool-1"
+    assert result["value"] == {"resource_pool": "pool-1", "name": "my_pool"}
     assert result["info"] == [{"resource_pool": "pool-1", "name": "my_pool"}]
 
 
@@ -102,22 +104,24 @@ def test_normalize_info_results_multiple_items(info_module):
 
 
 def test_normalize_info_results_empty_list(info_module):
+    # With auto-detection: 0 items (len <= 1) is treated as single resource, value is {}
     query_results = []
     result = info_module.normalize_info_results(query_results)
 
-    assert result == {"info": [], "value": []}
+    assert result == {"info": [], "value": {}}
 
 
 def test_normalize_info_results_empty_get(info_module):
+    # With auto-detection: 0 items (len <= 1) is treated as single resource, value is {}
     query_results = []
-    result = info_module.normalize_info_results(query_results, single_resource=True)
+    result = info_module.normalize_info_results(query_results)
 
     assert result == {"info": [], "value": {}}
 
 
 def test_normalize_info_results_rejects_non_list(info_module):
     with pytest.raises(AnsibleFailJson):
-        info_module.normalize_info_results({"not": "a list"}, single_resource=False)
+        info_module.normalize_info_results({"not": "a list"})
 
 
 def test_list_resource_details_success(info_module, mock_client):
