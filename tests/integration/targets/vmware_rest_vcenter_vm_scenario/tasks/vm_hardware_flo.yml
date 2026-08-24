@@ -14,12 +14,19 @@
     allow_guest_control: true
   register: my_floppy_drive
 
+- name: List the floppy disk drives
+  vmware.vmware_rest.vcenter_vm_hardware_floppy_info:
+    vm: "{{ _test_vm_moid }}"
+    floppy: "{{ my_floppy_drive.id }}"
+  register: _result
+
 - name: Verify floppy driver was added
   ansible.builtin.assert:
     that:
       - my_floppy_drive is ansible.builtin.changed
       - my_floppy_drive.value | length > 0
-      - my_floppy_drive.value.allow_guest_control
+      - _result.info | length == 1
+      - _result.info[0].allow_guest_control is true
 
 - name: Remove a floppy drive
   vmware.vmware_rest.vcenter_vm_hardware_floppy:

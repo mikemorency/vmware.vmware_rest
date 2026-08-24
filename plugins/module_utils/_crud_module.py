@@ -118,12 +118,11 @@ class VmwareRestCrudModuleBase(VmwareRestModuleBase):
         action_value = self.params["state"]
         action_operation = self.action_operations[action_value]
         result = {"changed": False, "id": ""}
-        resource = self.params
-        resource_id = self._get_moid_attribute_value_from_resource(resource)
+        resource_id = self._get_moid_attribute_value_from_resource(self.params)
         result["id"] = resource_id
         result["changed"] = True
         kwargs = {
-            "path": action_operation.build_path(params={**self.params, **resource}),
+            "path": action_operation.build_path(params=self.params),
             "data": action_operation.build_body(params=self.params),
             "query": action_operation.build_query(params=self.params),
         }
@@ -145,7 +144,15 @@ class VmwareRestCrudModuleBase(VmwareRestModuleBase):
         self._create or self._update, as appropriate.
         """
         result = {"changed": False, "id": ""}
-        resource = self._resolve_resource_context()
+        try:
+            resource = self._resolve_resource_context()
+        except RequiredPathParameterError as e:
+            # Did the user omit the ID param because the object doesnt exist yet?
+            # Or did they omit a different param that is actually required?
+            if e.param_name == self.moid_parameter_hints[-1]:
+                resource = {}
+            else:
+                raise
 
         if not resource or resource is self.params:
             new_id, value = self._create()
@@ -198,7 +205,7 @@ class VmwareRestCrudModuleBase(VmwareRestModuleBase):
         if not self.module.check_mode:
             response = http_method(path, data=body)
             value = self._get_response_value(response)
-            new_id = value
+            new_id = value if isinstance(value, str) else ""
 
         return new_id, value
 
