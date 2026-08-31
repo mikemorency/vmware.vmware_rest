@@ -7,6 +7,8 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
+import re
+
 from ._module_base import (
     VmwareRestModuleBase,
 )
@@ -58,8 +60,20 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         result = []
         http_method = getattr(self.client, self.get_operation_config.http_method)
         for resource in self._perform_list_operation():
+            params = self.params.copy()
+            if isinstance(resource, dict):
+                # The list endpoint returned resource summaries (dicts).
+                enrichment = resource
+            else:
+                # The list endpoint returned bare identifier strings. Map each
+                # identifier onto the unfilled path parameter of the get
+                # operation so the detail lookup can be built.
+                path_param = self._unfilled_get_path_parameter(params)
+                enrichment = {path_param: resource} if path_param else {}
+            params = {**params, **enrichment}
+
             path = self.get_operation_config.build_path(
-                params={**self.params, **resource},
+                params=params,
             )
             response = http_method(path)
             if not response:
@@ -74,8 +88,20 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
                 )
                 continue
 
-            result.append({**resource, **response.json})
+            result.append({**enrichment, **response.json})
         return result
+
+    def _unfilled_get_path_parameter(self, params: dict):
+        """
+        Return the name of the first path parameter in the get operation's URI
+        that is not already populated by the given params, or None if all are
+        populated. Used to map a bare identifier string returned by a list
+        endpoint onto the get operation's path template.
+        """
+        for placeholder in re.findall(r"\{(\w+)\}", self.get_operation_config.uri):
+            if not params.get(placeholder):
+                return placeholder
+        return None
 
     def normalize_info_results(
         self, query_results: list, single_resource: bool

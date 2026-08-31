@@ -236,7 +236,7 @@ class Client:
 
     def put(self, path, data, query=None):
         resp = self.request("PUT", path, data=data, query=query)
-        if resp.status == 200:
+        if resp.status in (200, 204):
             return resp
         self.error_handler.handle_request_error(
             exception=UnexpectedAPIResponse(resp.status, resp.data),
