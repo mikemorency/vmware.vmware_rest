@@ -89,6 +89,11 @@ class VmwareRestModuleBase(ABC):
         return response.json
 
     def _get_moid_attribute_value_from_resource(self, resource):
+        # if the api response was not a dict, getting the moid attribute doesnt
+        # make sense
+        if not isinstance(resource, dict):
+            return None
+
         # check the last hint first, since that is usually the last parameter from the
         # URI (for example "/vcenter/vm/{vm}/hardware/floppy/{floppy}")
         for moid_parameter_hint in reversed(self.moid_parameter_hints):

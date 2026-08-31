@@ -71,57 +71,68 @@ def test_info_module_initialization(info_module):
     assert "resource_pool" in info_module.moid_parameter_hints
 
 
-def test_normalize_info_results_single_resource_get(info_module):
-    # With auto-detection: 1 item is treated as single resource
+def test_normalize_info_results_single_resource(info_module):
+    # single_resource=True: value is the single dict and id is extracted from it
     query_results = [{"resource_pool": "pool-1", "name": "my_pool"}]
-    result = info_module.normalize_info_results(query_results)
+    result = info_module.normalize_info_results(query_results, single_resource=True)
 
     assert result["id"] == "pool-1"
     assert result["value"] == {"resource_pool": "pool-1", "name": "my_pool"}
     assert result["info"] == [{"resource_pool": "pool-1", "name": "my_pool"}]
 
 
-def test_normalize_info_results_single_resource_list(info_module):
-    # With auto-detection: 1 item is treated as single resource (value is dict, not list)
-    query_results = [{"resource_pool": "pool-1", "name": "my_pool"}]
-    result = info_module.normalize_info_results(query_results)
+def test_normalize_info_results_single_resource_without_moid(info_module):
+    # single_resource=True but the resource has no recognizable MOID attribute:
+    # value is still a dict, but no id key is added
+    query_results = [{"name": "my_pool"}]
+    result = info_module.normalize_info_results(query_results, single_resource=True)
 
-    assert result["id"] == "pool-1"
-    assert result["value"] == {"resource_pool": "pool-1", "name": "my_pool"}
-    assert result["info"] == [{"resource_pool": "pool-1", "name": "my_pool"}]
+    assert "id" not in result
+    assert result["value"] == {"name": "my_pool"}
+    assert result["info"] == [{"name": "my_pool"}]
+
+
+def test_normalize_info_results_single_resource_non_dict(info_module):
+    # single_resource=True with a bare scalar (e.g. appliance health status string):
+    # value preserves the scalar and no id is added
+    query_results = ["green"]
+    result = info_module.normalize_info_results(query_results, single_resource=True)
+
+    assert "id" not in result
+    assert result["value"] == "green"
+    assert result["info"] == ["green"]
 
 
 def test_normalize_info_results_multiple_items(info_module):
+    # single_resource=False: value preserves the list shape and no id is added
     query_results = [
         {"resource_pool": "pool-1", "name": "pool_1"},
         {"resource_pool": "pool-2", "name": "pool_2"},
     ]
-    result = info_module.normalize_info_results(query_results)
+    result = info_module.normalize_info_results(query_results, single_resource=False)
 
     assert "id" not in result
     assert result["value"] == query_results
     assert result["info"] == query_results
 
 
+def test_normalize_info_results_empty_single_resource(info_module):
+    # single_resource=True with no results: value is an empty dict
+    result = info_module.normalize_info_results([], single_resource=True)
+
+    assert result == {"info": [], "value": {}}
+
+
 def test_normalize_info_results_empty_list(info_module):
-    # With auto-detection: 0 items (len <= 1) is treated as single resource, value is {}
-    query_results = []
-    result = info_module.normalize_info_results(query_results)
+    # single_resource=False with no results: value is an empty list
+    result = info_module.normalize_info_results([], single_resource=False)
 
-    assert result == {"info": [], "value": {}}
-
-
-def test_normalize_info_results_empty_get(info_module):
-    # With auto-detection: 0 items (len <= 1) is treated as single resource, value is {}
-    query_results = []
-    result = info_module.normalize_info_results(query_results)
-
-    assert result == {"info": [], "value": {}}
+    assert result == {"info": [], "value": []}
 
 
 def test_normalize_info_results_rejects_non_list(info_module):
     with pytest.raises(AnsibleFailJson):
-        info_module.normalize_info_results({"not": "a list"})
+        info_module.normalize_info_results({"not": "a list"}, single_resource=True)
 
 
 def test_list_resource_details_success(info_module, mock_client):

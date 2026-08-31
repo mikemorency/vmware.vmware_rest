@@ -56,6 +56,17 @@ value:
     action: reboot
     reason: Scheduled maintenance window
   type: dict
+info:
+  description:
+    - The same information as RV(value), returned as a list for consistency with other info modules.
+    - This endpoint returns a single item, so the list always contains one element.
+  returned: On success
+  type: list
+  elements: dict
+  sample:
+    - shutdown_time: '2026-08-03T12:00:00Z'
+      action: reboot
+      reason: Scheduled maintenance window
 """
 
 

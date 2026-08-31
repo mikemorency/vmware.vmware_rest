@@ -183,3 +183,13 @@ def test_get_moid_attribute_value_from_resource_returns_none_when_not_found(
     resource = {"name": "my_pool"}
     moid = base_module._get_moid_attribute_value_from_resource(resource)
     assert moid is None
+
+
+@pytest.mark.parametrize("resource", ["green", 42, ["green"], None])
+def test_get_moid_attribute_value_from_resource_returns_none_for_non_dict(
+    base_module, resource
+):
+    # Endpoints that return a bare scalar (e.g. the appliance health modules
+    # return a status string) must not raise AttributeError.
+    moid = base_module._get_moid_attribute_value_from_resource(resource)
+    assert moid is None
