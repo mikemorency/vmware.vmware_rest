@@ -193,9 +193,7 @@ class TestCheckMode:
         mock_module.exit_json.side_effect = exit_json
         mock_module.check_mode = True
 
-        mock_client.get.return_value = _response(
-            200, [{"name": "ApplianceManagement"}]
-        )
+        mock_client.get.return_value = _response(200, [{"name": "ApplianceManagement"}])
 
         with pytest.raises(AnsibleExitJson) as exc:
             module_under_test.main()
