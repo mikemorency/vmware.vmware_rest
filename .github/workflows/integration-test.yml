@@ -98,16 +98,19 @@ jobs:
             run_all=true
           fi
 
+          # ansible-test writes the target list to stdout and diagnostics
+          # (detected branch, changed files, warnings) to stderr; keep stderr in
+          # the job log for debugging while capturing only targets to the file.
           if [ "$run_all" = "true" ]; then
             # List every target ansible-test knows about (no change detection).
-            ansible-test integration --list-targets > targets.txt 2>/dev/null
+            ansible-test integration --list-targets > targets.txt
           else
             # Recreate the base branch locally and run ansible-test change
             # detection to map the diff to affected integration targets.
             git branch -f "$BASE_REF" "origin/${BASE_REF}"
             git checkout -B "pr-${PR_NUMBER}" >/dev/null 2>&1
             ansible-test integration --list-targets --changed \
-              --base-branch "$BASE_REF" > targets.txt 2>/dev/null
+              --base-branch "$BASE_REF" > targets.txt
           fi
 
           echo "Candidate targets:"
@@ -152,6 +155,9 @@ jobs:
   integration:
     name: Integration (Ⓐ${{ matrix.versions.ansible }} - ${{ matrix.versions.python }} - group ${{ matrix.target_group.id }})
     needs: integration-matrix
+    # Skip cleanly when no targets are affected. An empty matrix vector is a hard
+    # error in GitHub Actions (not a skip), so guard the whole job instead.
+    if: ${{ needs.integration-matrix.outputs.target_groups != '[]' }}
     strategy:
       fail-fast: false
       matrix:
