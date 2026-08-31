@@ -25,9 +25,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/Appliance.Health.Database.Info"
                 },
-                "example": "orange"
+                "example": {
+                  "status": "DEGRADED",
+                  "messages": [
+                    {
+                      "severity": "WARNING",
+                      "message": {
+                        "id": "com.vmware.appliance.health.database.degraded",
+                        "default_message": "Database is degraded.",
+                        "args": []
+                      }
+                    }
+                  ]
+                }
               }
             }
           },
@@ -39,6 +51,37 @@
     }
   },
   "components": {
-    "schemas": {}
+    "schemas": {
+      "Appliance.Health.Database.Info": {
+        "type": "object",
+        "required": ["status", "messages"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Database health status (HEALTHY, DEGRADED, or UNHEALTHY)."
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Appliance.Health.Database.Message"
+            }
+          }
+        }
+      },
+      "Appliance.Health.Database.Message": {
+        "type": "object",
+        "required": ["severity", "message"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "description": "Severity of the message (ERROR or WARNING)."
+          },
+          "message": {
+            "type": "object",
+            "description": "A localizable message describing the issue."
+          }
+        }
+      }
+    }
   }
 }

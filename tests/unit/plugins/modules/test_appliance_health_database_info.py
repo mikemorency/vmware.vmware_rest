@@ -6,8 +6,10 @@
 Unit tests for appliance_health_database_info module.
 
 Tests validate the Info module behavior using the OperationConfig-based
-architecture with mocked HTTP clients. This endpoint is a singleton that
-returns a bare health-status string (for example "green").
+architecture with mocked HTTP clients. Unlike the sibling health endpoints
+(which return a bare color string), this singleton returns a dict describing
+the database health, with a "status" field (HEALTHY/DEGRADED/UNHEALTHY) and a
+"messages" list.
 """
 
 from __future__ import absolute_import, division, print_function
@@ -57,17 +59,18 @@ def _run_module(patch_ansible_module, mock_client, module_args, status, body):
 
 
 # ============================================================================
-# Test GET Operations (Singleton returning a status string)
+# Test GET Operations (Singleton returning a health-status dict)
 # ============================================================================
 
 
-def test_get_database_health_green(
+def test_get_database_health_healthy(
     patch_create_client, patch_ansible_module, mock_client, module_args
 ):
-    """Test getting database health when services are healthy."""
+    """Test getting database health when the database is healthy."""
     patch_create_client.return_value = mock_client
+    body = {"status": "HEALTHY", "messages": []}
     mock_module = _run_module(
-        patch_ansible_module, mock_client, module_args, 200, "green"
+        patch_ansible_module, mock_client, module_args, 200, body
     )
 
     with pytest.raises(AnsibleExitJson) as exc:
@@ -75,32 +78,41 @@ def test_get_database_health_green(
 
     mock_module.exit_json.assert_called_once()
     result = exc.value.kwargs
-    assert result["value"] == "green"
-    assert result["info"] == ["green"]
-    # A bare string has no MOID, so no id should be reported.
+    assert result["value"] == body
+    assert result["info"] == [body]
+    # The response dict has no MOID attribute, so no id should be reported.
     assert "id" not in result
 
 
-@pytest.mark.parametrize("status_color", ["yellow", "orange", "red", "gray"])
 def test_get_database_health_degraded(
-    patch_create_client,
-    patch_ansible_module,
-    mock_client,
-    module_args,
-    status_color,
+    patch_create_client, patch_ansible_module, mock_client, module_args
 ):
-    """Test getting database health for each non-green status value."""
+    """Test getting database health when the database reports issues."""
     patch_create_client.return_value = mock_client
+    body = {
+        "status": "DEGRADED",
+        "messages": [
+            {
+                "severity": "WARNING",
+                "message": {
+                    "id": "com.vmware.appliance.health.database.degraded",
+                    "default_message": "Database is degraded.",
+                    "args": [],
+                },
+            }
+        ],
+    }
     mock_module = _run_module(
-        patch_ansible_module, mock_client, module_args, 200, status_color
+        patch_ansible_module, mock_client, module_args, 200, body
     )
 
     with pytest.raises(AnsibleExitJson) as exc:
         module_under_test.main()
 
     result = exc.value.kwargs
-    assert result["value"] == status_color
-    assert result["info"] == [status_color]
+    assert result["value"] == body
+    assert result["value"]["status"] == "DEGRADED"
+    assert result["info"] == [body]
 
 
 def test_get_database_health_not_found(
@@ -139,13 +151,14 @@ class TestCheckMode:
         mock_module.exit_json.side_effect = exit_json
         mock_module.check_mode = True
 
-        mock_client.get.return_value = _response(200, "green")
+        body = {"status": "HEALTHY", "messages": []}
+        mock_client.get.return_value = _response(200, body)
 
         with pytest.raises(AnsibleExitJson) as exc:
             module_under_test.main()
 
         result = exc.value.kwargs
-        assert result["value"] == "green"
+        assert result["value"] == body
         mock_client.get.assert_called_once()
 
 
@@ -162,7 +175,13 @@ class TestAPICallPath:
     ):
         """Test that GET uses the correct API path."""
         patch_create_client.return_value = mock_client
-        _run_module(patch_ansible_module, mock_client, module_args, 200, "green")
+        _run_module(
+            patch_ansible_module,
+            mock_client,
+            module_args,
+            200,
+            {"status": "HEALTHY", "messages": []},
+        )
 
         with pytest.raises(AnsibleExitJson):
             module_under_test.main()

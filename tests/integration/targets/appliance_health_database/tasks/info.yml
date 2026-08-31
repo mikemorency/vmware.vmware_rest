@@ -3,22 +3,23 @@
 # APPLIANCE_HEALTH_DATABASE_INFO TESTS
 # ============================================================
 
-# Test 1: Get health status when the subsystem is healthy (green)
+# Test 1: Get health status when the database is healthy
 - name: Get Database health status (healthy)
   vmware.vmware_rest.appliance_health_database_info: {}
-  register: database_health_green
+  register: database_health_healthy
 
 - name: Assert healthy status is reported
   ansible.builtin.assert:
     that:
-      - database_health_green.value is defined
-      - database_health_green.value == 'green'
-      - database_health_green.info is defined
-      - database_health_green.info | length == 1
-      - database_health_green.info[0] == 'green'
-      - not database_health_green.changed
+      - database_health_healthy.value is defined
+      - database_health_healthy.value.status == 'HEALTHY'
+      - database_health_healthy.value.messages == []
+      - database_health_healthy.info is defined
+      - database_health_healthy.info | length == 1
+      - database_health_healthy.info[0].status == 'HEALTHY'
+      - not database_health_healthy.changed
 
-# Test 2: Get health status when the subsystem is degraded (orange)
+# Test 2: Get health status when the database is degraded
 - name: Reset before degraded health expectations
   ansible.builtin.include_role:
     name: prepare_simulator
@@ -38,15 +39,17 @@
 
 - name: Get Database health status (degraded)
   vmware.vmware_rest.appliance_health_database_info: {}
-  register: database_health_orange
+  register: database_health_degraded
 
 - name: Assert degraded status is reported
   ansible.builtin.assert:
     that:
-      - database_health_orange.value == 'orange'
-      - database_health_orange.info | length == 1
-      - database_health_orange.info[0] == 'orange'
-      - not database_health_orange.changed
+      - database_health_degraded.value.status == 'DEGRADED'
+      - database_health_degraded.value.messages | length == 1
+      - database_health_degraded.value.messages[0].severity == 'WARNING'
+      - database_health_degraded.info | length == 1
+      - database_health_degraded.info[0].status == 'DEGRADED'
+      - not database_health_degraded.changed
 
 # Test 3: Check mode returns the same read-only result without error
 - name: Get Database health status (check mode)
@@ -57,5 +60,5 @@
 - name: Assert check mode reports no change for read-only info module
   ansible.builtin.assert:
     that:
-      - database_health_check.value == 'orange'
+      - database_health_check.value.status == 'DEGRADED'
       - not database_health_check.changed
