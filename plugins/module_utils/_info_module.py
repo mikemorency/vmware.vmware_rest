@@ -60,7 +60,6 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         result = []
         http_method = getattr(self.client, self.get_operation_config.http_method)
         for resource in self._perform_list_operation():
-            params = self.params.copy()
             if isinstance(resource, dict):
                 # The list endpoint returned resource summaries (dicts).
                 enrichment = resource
@@ -68,12 +67,11 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
                 # The list endpoint returned bare identifier strings. Map each
                 # identifier onto the unfilled path parameter of the get
                 # operation so the detail lookup can be built.
-                path_param = self._unfilled_get_path_parameter(params)
+                path_param = self._unfilled_get_path_parameter(self.params)
                 enrichment = {path_param: resource} if path_param else {}
-            params = {**params, **enrichment}
 
             path = self.get_operation_config.build_path(
-                params=params,
+                params={**self.params, **enrichment},
             )
             response = http_method(path)
             if not response:

@@ -15,9 +15,12 @@ __metaclass__ = type
 
 DOCUMENTATION = r"""
 module: appliance_localaccounts_info
-short_description: PLACEHOLDER
+short_description: Gather information about local accounts on the vCenter Server Appliance.
 description:
-  - PLACEHOLDER
+  - Retrieve information about local user accounts on the vCenter Server Appliance.
+  - When O(username) is provided, return the detailed properties of that single account, such as its
+    full name, email, assigned roles, and password aging settings.
+  - When O(username) is omitted, list all local accounts on the appliance.
 
 author:
   - Ansible Eco Content Team (@eco-ansible-content)
@@ -28,8 +31,8 @@ extends_documentation_fragment:
 options:
   username:
     description:
-      - Identifier of the username to manage.
-      - Must be an identifier (MOID) for a C(Username) resource.
+      - The name of the local account to retrieve detailed information for.
+      - When omitted, information about all local accounts on the appliance is returned.
     type: str
     required: false
 
@@ -42,9 +45,52 @@ notes:
 """
 
 EXAMPLES = r"""
+- name: List all local accounts on the appliance
+  vmware.vmware_rest.appliance_localaccounts_info:
+  register: all_accounts
+
+- name: Get information about a single local account
+  vmware.vmware_rest.appliance_localaccounts_info:
+    username: root
+  register: root_account
+
+- name: Display the roles assigned to the account
+  ansible.builtin.debug:
+    var: root_account.value.roles
 """
 
 RETURN = r"""
+id:
+  description: The name of the queried local account.
+  returned: When only one account, identified by O(username), was queried
+  sample: root
+  type: str
+value:
+  description: Detailed information about a single local account.
+  returned: When only one account, identified by O(username), was queried
+  sample:
+    enabled: true
+    has_password: true
+    fullname: root
+    email: admin@example.com
+    roles:
+      - superAdmin
+    last_password_change: "2026-06-01T00:00:00.000Z"
+    max_days_between_password_change: 90
+    min_days_between_password_change: 1
+    warn_days_before_password_expiration: 7
+  type: dict
+info:
+  description: A list of detailed information about local accounts on the appliance.
+  returned: When O(username) is not provided
+  elements: dict
+  sample:
+    - enabled: true
+      has_password: true
+      fullname: root
+      roles:
+        - superAdmin
+  type: list
 """
 
 

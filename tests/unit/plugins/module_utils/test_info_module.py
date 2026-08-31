@@ -207,6 +207,39 @@ def test_list_resource_details_handles_404(info_module, mock_client, mock_module
     mock_module.warn.assert_called_once()
 
 
+def test_list_resource_details_bare_string_identifiers(info_module, mock_client):
+    # Some list endpoints (e.g. /appliance/local-accounts) return bare
+    # identifier strings rather than summary dicts. Each string must be mapped
+    # onto the unfilled path parameter of the get operation so the detail
+    # lookup can be built.
+    get_response_1 = MagicMock()
+    get_response_1.status = 200
+    get_response_1.json = {"name": "pool_1"}
+
+    get_response_2 = MagicMock()
+    get_response_2.status = 200
+    get_response_2.json = {"name": "pool_2"}
+
+    mock_client.get.side_effect = [get_response_1, get_response_2]
+
+    with patch.object(
+        info_module,
+        "_perform_list_operation",
+        return_value=["pool-1", "pool-2"],
+    ):
+        result = info_module._list_resource_details()
+
+    # The get operation must be called with the identifier substituted into the
+    # {resource_pool} path template.
+    assert [call.args[0] for call in mock_client.get.call_args_list] == [
+        "/vcenter/resource-pool/pool-1",
+        "/vcenter/resource-pool/pool-2",
+    ]
+    # The enrichment (the mapped identifier) is merged into each result.
+    assert result[0] == {"resource_pool": "pool-1", "name": "pool_1"}
+    assert result[1] == {"resource_pool": "pool-2", "name": "pool_2"}
+
+
 def test_get_resource_info_with_resource_id(info_module, mock_client):
     info_module.params["resource_pool"] = "pool-1"
 
