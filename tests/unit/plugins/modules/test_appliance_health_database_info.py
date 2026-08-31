@@ -69,9 +69,7 @@ def test_get_database_health_healthy(
     """Test getting database health when the database is healthy."""
     patch_create_client.return_value = mock_client
     body = {"status": "HEALTHY", "messages": []}
-    mock_module = _run_module(
-        patch_ansible_module, mock_client, module_args, 200, body
-    )
+    mock_module = _run_module(patch_ansible_module, mock_client, module_args, 200, body)
 
     with pytest.raises(AnsibleExitJson) as exc:
         module_under_test.main()
@@ -102,9 +100,7 @@ def test_get_database_health_degraded(
             }
         ],
     }
-    mock_module = _run_module(
-        patch_ansible_module, mock_client, module_args, 200, body
-    )
+    mock_module = _run_module(patch_ansible_module, mock_client, module_args, 200, body)
 
     with pytest.raises(AnsibleExitJson) as exc:
         module_under_test.main()
