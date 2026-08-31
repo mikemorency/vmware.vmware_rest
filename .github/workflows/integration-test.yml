@@ -53,47 +53,69 @@ jobs:
     outputs:
       target_groups: ${{ steps.set-matrix.outputs.target_groups }}
     steps:
+      # ansible-test requires the collection to live at
+      # <root>/ansible_collections/<namespace>/<name>/, and its change
+      # detection needs full git history plus a local base branch to diff
+      # against, so check out there with fetch-depth 0.
       - name: Checkout repo
         uses: actions/checkout@v7
         with:
-          # Full history so we can diff against the base/previous commit.
+          path: ansible_collections/vmware/vmware_rest
           fetch-depth: 0
+          # For pull requests, check out the branch head (not the merge commit)
+          # so change detection sees a normal feature branch forked from base.
+          ref: ${{ github.event.pull_request.head.sha }}
 
-      - id: changed-files
-        name: Determine changed files
+      - name: Install python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install ansible-core
+        run: python -m pip install ansible-core
+
+      - id: select-targets
+        name: Select affected integration targets
+        working-directory: ansible_collections/vmware/vmware_rest
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          git config --global --add safe.directory "$PWD"
+
           run_all=false
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # Compare the whole PR against its base branch (usually main), not
-            # just the latest commit, so every change on the branch is covered.
-            base="${{ github.event.pull_request.base.sha }}"
-            head="${{ github.event.pull_request.head.sha }}"
-          else
-            # For pushes, compare the branch against main rather than the
-            # previous commit so the full set of changes is considered.
-            head="${{ github.sha }}"
-            if git rev-parse --verify --quiet origin/main >/dev/null; then
-              base="$(git merge-base origin/main "$head")"
-            else
-              base=""
-            fi
-          fi
-          if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
-            git diff --name-only "$base" "$head" > changed_files.txt
-          else
-            # Missing base/history: fall back to running everything.
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            # Pushes land on an "official" branch (main / stable-*) which
+            # ansible-test refuses to run change detection against, so run the
+            # full suite.
             run_all=true
-            : > changed_files.txt
+          elif git diff --name-only "origin/${BASE_REF}...HEAD" | grep -q '^\.github/'; then
+            # ansible-test does not model .github/ changes; run everything so CI
+            # changes are validated against the whole suite.
+            echo "Detected .github/ changes; running all targets."
+            run_all=true
           fi
-          echo "run_all=${run_all}" >> "$GITHUB_OUTPUT"
-          echo "Changed files:"
-          cat changed_files.txt
+
+          if [ "$run_all" = "true" ]; then
+            # List every target ansible-test knows about (no change detection).
+            ansible-test integration --list-targets > targets.txt 2>/dev/null
+          else
+            # Recreate the base branch locally and run ansible-test change
+            # detection to map the diff to affected integration targets.
+            git branch -f "$BASE_REF" "origin/${BASE_REF}"
+            git checkout -B "pr-${PR_NUMBER}" >/dev/null 2>&1
+            ansible-test integration --list-targets --changed \
+              --base-branch "$BASE_REF" > targets.txt 2>/dev/null
+          fi
+
+          echo "Candidate targets:"
+          cat targets.txt
 
       - id: set-matrix
-        name: Select affected integration targets and split into groups of 10
-        env:
-          RUN_ALL: ${{ steps.changed-files.outputs.run_all }}
+        name: Filter targets and split into groups of 10
+        working-directory: ansible_collections/vmware/vmware_rest
         run: |
           python <<'EOF'
           import json
@@ -101,66 +123,17 @@ jobs:
           from pathlib import Path
 
           group_size = 10
-          targets_dir = Path("tests/integration/targets")
-          all_targets = sorted(
-              path.name
-              for path in targets_dir.iterdir()
-              if path.is_dir()
-              and not path.name.startswith("vmware_rest_")
-              and not path.name.startswith("prepare_")
+
+          # vmware_rest_* are live-vCenter scenario targets that do not run
+          # against the mock server, and prepare_* are hidden setup helpers;
+          # exclude both from the mock integration matrix.
+          targets = sorted(
+              line.strip()
+              for line in Path("targets.txt").read_text(encoding="utf-8").splitlines()
+              if line.strip()
+              and not line.strip().startswith("vmware_rest_")
+              and not line.strip().startswith("prepare_")
           )
-          all_targets_set = set(all_targets)
-
-          changed_path = Path("changed_files.txt")
-          changed = []
-          if changed_path.exists():
-              changed = [
-                  line.strip()
-                  for line in changed_path.read_text(encoding="utf-8").splitlines()
-                  if line.strip()
-              ]
-
-          def triggers_full_run(files):
-              """Some changes affect everything, so all targets must run."""
-              for path in files:
-                  parts = path.split("/")
-                  # Shared module utilities are used by every module.
-                  if path.startswith("plugins/module_utils/"):
-                      return True
-                  # Anything under .github/ (recursive).
-                  if path.startswith(".github/"):
-                      return True
-                  # Files directly under tests/ (non-recursive).
-                  if len(parts) == 2 and parts[0] == "tests":
-                      return True
-                  # Files at the project root (non-recursive).
-                  if len(parts) == 1:
-                      return True
-              return False
-
-          run_all = os.environ.get("RUN_ALL") == "true"
-          if run_all or triggers_full_run(changed):
-              targets = list(all_targets)
-          else:
-              selected = set()
-              for path in changed:
-                  parts = path.split("/")
-                  # A changed module maps to its matching target, e.g.
-                  # plugins/modules/appliance_health_database_info.py
-                  #   -> appliance_health_database
-                  if path.startswith("plugins/modules/") and path.endswith(".py"):
-                      stem = Path(path).stem
-                      candidates = {stem}
-                      if stem.endswith("_info"):
-                          candidates.add(stem[: -len("_info")])
-                      selected.update(candidates & all_targets_set)
-                  # A changed integration target runs itself, e.g.
-                  # tests/integration/targets/<target>/...
-                  elif path.startswith("tests/integration/targets/") and len(parts) >= 4:
-                      target = parts[3]
-                      if target in all_targets_set:
-                          selected.add(target)
-              targets = sorted(selected)
 
           target_groups = [
               {
