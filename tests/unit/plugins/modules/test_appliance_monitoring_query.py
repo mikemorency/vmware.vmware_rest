@@ -280,9 +280,12 @@ class TestModuleConstants:
         assert module_under_test.GET_OPERATION.uri == "/appliance/monitoring/query"
         assert module_under_test.GET_OPERATION.http_method == "get"
         # The query parameters are declared on the GET operation.
-        assert module_under_test.GET_OPERATION.build_query(
-            {"item": {"interval": "MINUTES5"}, "names": ["cpu.util"]}
-        ) is not None
+        assert (
+            module_under_test.GET_OPERATION.build_query(
+                {"item": {"interval": "MINUTES5"}, "names": ["cpu.util"]}
+            )
+            is not None
+        )
 
 
 # ============================================================================

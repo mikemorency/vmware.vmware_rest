@@ -76,10 +76,10 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
                 path_param = self._unfilled_get_path_parameter(self.params)
                 enrichment = {path_param: resource} if path_param else {}
 
-            path = self.get_operation_config.build_path(
-                params={**self.params, **enrichment},
-            )
-            response = http_method(path)
+            params = {**self.params, **enrichment}
+            path = self.get_operation_config.build_path(params=params)
+            query = self.get_operation_config.build_query(params=params)
+            response = http_method(path, query=query)
             if not response:
                 self.module.fail_json(
                     "Error while looking up more details about a resource: %s" % path
