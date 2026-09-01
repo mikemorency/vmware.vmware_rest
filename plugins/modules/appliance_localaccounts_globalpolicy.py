@@ -39,98 +39,79 @@ options:
   max_days:
     description:
       - Maximum number of days a password may be used. If the password is older than this, a password change will be forced.
-      - This property was added in __vSphere API 6.7__.
-      - If missing or 'null' then the restriction will be ignored.
-      - This updates the global settings for the new users as well as the existing users. To update the settings for a particular user, the
-        PATCH /api/appliance/local-accounts/{username} API can be used.
+      - This property was added in vSphere API 6.7.
     type: int
     required: false
   min_days:
     description:
       - Minimum number of days allowed between password changes. Any password changes attempted sooner than this will be rejected.
-      - This property was added in __vSphere API 6.7__.
-      - If missing or 'null' then the restriction will be ignored.
-      - This updates the global settings for the new users as well as the existing users. To update the settings for a particular user, the
-        PATCH /api/appliance/local-accounts/{username} API can be used.
+      - This property was added in vSphere API 6.7.
     type: int
     required: false
   warn_days:
     description:
       - Number of days warning given before a password expires. A zero means warning is given only upon the day of expiration.
-      - This property was added in __vSphere API 6.7__.
-      - If missing or 'null' then no warning will be provided.
-      - This updates the global settings for the new users as well as the existing users. To update the settings for a particular user, the
-        PATCH /api/appliance/local-accounts/{username} API can be used.
+      - This property was added in vSphere API 6.7.
     type: int
     required: false
   prior_password_remember_count:
     description:
       - The number of prior passwords for the user to be remembered by the vCenter appliance in order for the appliance to assess non-repetition.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then no warning will be provided.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   failed_attempt_count_before_account_lockout:
     description:
       - Threshold Number of consecutive authentication failures for the user during the recent interval before the account is locked out.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then no warning will be provided
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   length_of_lockout_period_in_seconds:
     description:
       - The access will be reenabled after n seconds after the lock out.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then no warning will be provided
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   fail_interval_between_attempts:
     description:
       - The length of the interval during which the consecutive authentication failures must happen for the user account lock out
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the restriction will be ignored.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   minimum_length:
     description:
       - Minimum number of the characters needed in the password.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the restriction will be ignored.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   minimum_uppercase_char_count:
     description:
       - Minimum number of upper case characters needed in the password.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the restriction will be ignored.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   minimum_lowercase_char_count:
     description:
       - Minimum number of lower case characters needed in the password.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the restriction will be ignored.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   minimum_numerics_char_count:
     description:
       - Minimum number of numeric characters needed in the password.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the restriction will be ignored.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   minimum_special_char_count:
     description:
       - Minimum number of special characters needed in the password.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the restriction will be ignored.
+      - This property was added in vSphere API 9.1.0.0.
     type: int
     required: false
   managed_at_fleet:
     description:
       - Whether the password policy is managed at fleet or not.
-      - This property was added in __vSphere API 9.1.0.0__.
-      - If missing or 'null' then the password policy is not fleet managed
+      - This property was added in vSphere API 9.1.0.0.
     type: bool
     required: false
 
