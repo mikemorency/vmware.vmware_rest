@@ -61,7 +61,13 @@ class VmwareRestInfoModuleBase(VmwareRestModuleBase):
         http_method = getattr(self.client, self.get_operation_config.http_method)
         for resource in self._perform_list_operation():
             if isinstance(resource, dict):
-                # The list endpoint returned resource summaries (dicts).
+                # The list endpoint returned resource summaries (dicts). If the
+                # summary doesn't provide the get operation's path parameter, it
+                # cannot be enriched via a per-item lookup and is already
+                # complete, so use it as-is.
+                if self._unfilled_get_path_parameter({**self.params, **resource}):
+                    result.append(resource)
+                    continue
                 enrichment = resource
             else:
                 # The list endpoint returned bare identifier strings. Map each

@@ -240,6 +240,24 @@ def test_list_resource_details_bare_string_identifiers(info_module, mock_client)
     assert result[1] == {"resource_pool": "pool-2", "name": "pool_2"}
 
 
+def test_list_resource_details_full_dicts_without_path_param(info_module, mock_client):
+    # Some list endpoints (e.g. /appliance/monitoring) return full resource
+    # dicts whose identifier attribute is named differently than the get
+    # operation's path parameter ("id" vs "{resource_pool}"). Since the dict
+    # cannot supply the path parameter, it is already complete and is returned
+    # as-is without a redundant per-item detail lookup.
+    items = [
+        {"id": "cpu.util", "name": "CPU utilization"},
+        {"id": "mem.util", "name": "Memory utilization"},
+    ]
+    with patch.object(info_module, "_perform_list_operation", return_value=items):
+        result = info_module._list_resource_details()
+
+    # No per-item get lookups are performed.
+    mock_client.get.assert_not_called()
+    assert result == items
+
+
 def test_get_resource_info_with_resource_id(info_module, mock_client):
     info_module.params["resource_pool"] = "pool-1"
 
