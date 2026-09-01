@@ -81,8 +81,9 @@ class VmwareRestModuleBase(ABC):
         else:
             params = self.params
         path = self.get_operation_config.build_path(params=params)
+        query = self.get_operation_config.build_query(params=params)
         http_method = getattr(self.client, self.get_operation_config.http_method)
-        response = http_method(path)
+        response = http_method(path, query=query)
         if response.status == 404:
             return None
 
