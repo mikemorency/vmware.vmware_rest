@@ -1255,6 +1255,25 @@ def generate_module(yaml_data: Dict, module_name: str, api_version: str) -> str:
             if param_name in FILTER_ALIAS_PARAMS:
                 options[param_name]["aliases"] = [f"filter_{param_name}"]
 
+    # 3c. Ensure CRUD modules always expose a 'state' option.
+    # Some resources (e.g. singleton update-only endpoints) define no explicit
+    # state option and no actions, yet main() dispatches on module.params["state"].
+    # Default such modules to a 'present'-only state so the argument spec and
+    # documentation stay consistent with the generated main().
+    if not is_info and "state" not in options and not action_endpoints:
+        options = {
+            "state": {
+                "type": "str",
+                "default": "present",
+                "choices": ["present"],
+                "description": [
+                    "The desired state of the resource.",
+                    "Use C(present) to create or update the resource.",
+                ],
+            },
+            **options,
+        }
+
     # 4. Generate sections
     header = HEADER_TEMPLATE.strip()
     documentation = generate_documentation(module_name, options, api_version)
