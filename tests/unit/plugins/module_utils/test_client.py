@@ -17,6 +17,7 @@ from ansible_collections.vmware.vmware_rest.plugins.module_utils._client import 
     Client,
     ClientRequestErrorHandler,
     Response,
+    flatten_query_params,
 )
 from ansible_collections.vmware.vmware_rest.plugins.module_utils._errors import (
     ApiCommunicationError,
@@ -95,6 +96,51 @@ def test_client_build_url_without_port(error_handler):
     client = Client(error_handler=error_handler, host="vcenter.example.com")
     url = client._build_url("/rest/com/vmware/cis/session")
     assert url == "https://vcenter.example.com/rest/com/vmware/cis/session"
+
+
+def test_flatten_query_params_leaves_scalars_and_lists_unchanged():
+    query = {"filter": "poweredOn", "names": ["cpu.util", "mem.util"]}
+    assert flatten_query_params(query) == query
+
+
+def test_flatten_query_params_flattens_nested_dict():
+    query = {"item": {"interval": "MINUTES5", "function": "AVG"}}
+    assert flatten_query_params(query) == {
+        "interval": "MINUTES5",
+        "function": "AVG",
+    }
+
+
+def test_flatten_query_params_flattens_nested_dict_mixed_with_scalars():
+    query = {
+        "item": {"interval": "MINUTES5", "function": "AVG"},
+        "names": ["cpu.util"],
+    }
+    assert flatten_query_params(query) == {
+        "interval": "MINUTES5",
+        "function": "AVG",
+        "names": ["cpu.util"],
+    }
+
+
+def test_flatten_query_params_flattens_recursively():
+    query = {"outer": {"inner": {"deep": "value"}}}
+    assert flatten_query_params(query) == {"deep": "value"}
+
+
+def test_flatten_query_params_empty_dict():
+    assert flatten_query_params({}) == {}
+
+
+def test_client_build_url_flattens_nested_dict_query(client):
+    url = client._build_url(
+        "/appliance/monitoring/query",
+        query={"item": {"interval": "MINUTES5", "function": "AVG"}},
+    )
+    assert url == (
+        "https://vcenter.example.com:443/api/appliance/monitoring/query"
+        "?interval=MINUTES5&function=AVG"
+    )
 
 
 def test_client_auth_headers_login_once(client):

@@ -240,6 +240,69 @@ def test_list_resource_details_bare_string_identifiers(info_module, mock_client)
     assert result[1] == {"resource_pool": "pool-2", "name": "pool_2"}
 
 
+def test_list_resource_details_full_dicts_without_path_param(info_module, mock_client):
+    # Some list endpoints (e.g. /appliance/monitoring) return full resource
+    # dicts whose identifier attribute is named differently than the get
+    # operation's path parameter ("id" vs "{resource_pool}"). Since the dict
+    # cannot supply the path parameter, it is already complete and is returned
+    # as-is without a redundant per-item detail lookup.
+    items = [
+        {"id": "cpu.util", "name": "CPU utilization"},
+        {"id": "mem.util", "name": "Memory utilization"},
+    ]
+    with patch.object(info_module, "_perform_list_operation", return_value=items):
+        result = info_module._list_resource_details()
+
+    # No per-item get lookups are performed.
+    mock_client.get.assert_not_called()
+    assert result == items
+
+
+def test_list_resource_details_includes_query_params(mock_module, mock_client):
+    # The get operation's query_spec must be honored for per-item detail
+    # lookups performed during the list-then-enrich fallback, not just for
+    # the direct-get path in _module_base.py.
+    get_operation_config = OperationConfig(
+        name="get",
+        uri="/vcenter/resource-pool/{resource_pool}",
+        http_method="get",
+        query_spec={"verbose": {"required": False}},
+    )
+    list_operation_config = OperationConfig(
+        name="list",
+        uri="/vcenter/resource-pool",
+        http_method="get",
+    )
+
+    with patch(
+        "ansible_collections.vmware.vmware_rest.plugins.module_utils._module_base.Client",
+        return_value=mock_client,
+    ):
+        module_instance = VmwareRestInfoModuleBase(
+            module=mock_module,
+            moid_parameter_hints=["resource_pool"],
+            get_operation_config=get_operation_config,
+            list_operation_config=list_operation_config,
+        )
+    module_instance.params = {**module_instance.params, "verbose": True}
+
+    get_response = MagicMock()
+    get_response.status = 200
+    get_response.json = {"name": "pool_1"}
+    mock_client.get.return_value = get_response
+
+    with patch.object(
+        module_instance,
+        "_perform_list_operation",
+        return_value=["pool-1"],
+    ):
+        module_instance._list_resource_details()
+
+    mock_client.get.assert_called_once_with(
+        "/vcenter/resource-pool/pool-1", query={"verbose": True}
+    )
+
+
 def test_get_resource_info_with_resource_id(info_module, mock_client):
     info_module.params["resource_pool"] = "pool-1"
 

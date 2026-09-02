@@ -31,6 +31,26 @@ HEADER_APPLICATION_JSON = "application/json"
 DEFAULT_HEADERS = dict(Accept=HEADER_APPLICATION_JSON)
 
 
+def flatten_query_params(query):
+    """
+    Flatten object-valued query parameters into individual top-level keys.
+
+    vSphere query parameters use OpenAPI style=form, explode=true, so an
+    object-valued parameter is serialized as its individual properties rather
+    than under the containing parameter name. For example
+    {"item": {"interval": "MINUTES5", "function": "AVG"}} is serialized as
+    interval=MINUTES5&function=AVG. Scalar and list values are returned
+    unchanged so urlencode(doseq=True) can serialize them.
+    """
+    flat = {}
+    for key, value in query.items():
+        if isinstance(value, dict):
+            flat.update(flatten_query_params(value))
+        else:
+            flat[key] = value
+    return flat
+
+
 class Response:
     def __init__(self, status, data, headers=None):
         self.status = status
@@ -198,7 +218,9 @@ class Client:
             host = self.host
         url = f"https://{host}/{self._normalize_api_path(path)}"
         if query:
-            url = "{0}?{1}".format(url, urlencode(query, doseq=True))
+            url = "{0}?{1}".format(
+                url, urlencode(flatten_query_params(query), doseq=True)
+            )
         return url
 
     def get(self, path, query=None):

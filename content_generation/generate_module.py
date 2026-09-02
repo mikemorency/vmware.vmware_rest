@@ -666,7 +666,14 @@ def generate_all_operations(
 
     # Generate GET operation
     if available_ops["has_get"]:
-        op = generate_operation_config("get", item_endpoint["uri"], "GET")
+        item_ops = item_endpoint.get("operations", {})
+        get_op = item_ops.get("get", {})
+        query_params = get_op.get("query", {})
+        query_spec = build_query_spec(query_params, options_dict)
+
+        op = generate_operation_config(
+            "get", item_endpoint["uri"], "GET", query_spec=query_spec
+        )
         operations.append(op)
 
     # Generate CREATE operation
