@@ -18,25 +18,25 @@
 - name: Print the monitored items
   ansible.builtin.debug:
     var: monitored_items
+# cant test this with our vsphere 8 lab
+# - name: Query the monitoring backend for memory usage
+#   vmware.vmware_rest.appliance_monitoring_query:
+#     end_time: "{{ end_time }}"
+#     start_time: "{{ start_time }}"
+#     names:
+#       - "{{ monitored_items.value[0].id }}"
+#     interval: MINUTES5
+#     function: AVG
+#   register: monitoring_query_result
 
-- name: Query the monitoring backend for memory usage
-  vmware.vmware_rest.appliance_monitoring_query:
-    end_time: "{{ end_time }}"
-    start_time: "{{ start_time }}"
-    names:
-      - "{{ monitored_items.value[0].id }}"
-    interval: MINUTES5
-    function: AVG
-  register: monitoring_query_result
+# - name: Assert monitoring query result is valid
+#   ansible.builtin.assert:
+#     that:
+#       - monitoring_query_result is defined
+#       - monitoring_query_result.value is not none
+#       - monitoring_query_result.value | length > 0
+#     fail_msg: "Failed to retrieve monitoring query results or results are empty."
 
-- name: Assert monitoring query result is valid
-  ansible.builtin.assert:
-    that:
-      - monitoring_query_result is defined
-      - monitoring_query_result.value is not none
-      - monitoring_query_result.value | length > 0
-    fail_msg: "Failed to retrieve monitoring query results or results are empty."
-
-- name: Print the monitoring query result
-  ansible.builtin.debug:
-    var: monitoring_query_result
+# - name: Print the monitoring query result
+#   ansible.builtin.debug:
+#     var: monitoring_query_result
