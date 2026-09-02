@@ -1,0 +1,13 @@
+---
+breaking_changes:
+  - "appliance_networking_interfaces_ipv4 - The ``state`` parameter now accepts ``present`` instead
+    of ``set``. Playbooks that explicitly set ``state: set`` must be updated to ``state: present``."
+  - "appliance_networking_interfaces_ipv6 - The ``state`` parameter now accepts ``present`` instead
+    of ``set``. Playbooks that explicitly set ``state: set`` must be updated to ``state: present``."
+bugfixes:
+  - appliance_networking_interfaces_ipv4_info - Mark ``interface_name`` as required so the module
+    fails clearly during argument validation instead of attempting a request against an incomplete
+    endpoint path.
+  - appliance_networking_interfaces_ipv6_info - Mark ``interface_name`` as required so the module
+    fails clearly during argument validation instead of attempting a request against an incomplete
+    endpoint path.
