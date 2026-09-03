@@ -18,7 +18,16 @@
     "/content/library/{library}/subscriptions": {
       "get": {
         "operationId": "Content.Library.Subscriptions_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "library",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "ok",
@@ -47,6 +56,14 @@
       "get": {
         "operationId": "Content.Library.Subscriptions_get",
         "parameters": [
+          {
+            "name": "library",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "subscription",
             "in": "path",

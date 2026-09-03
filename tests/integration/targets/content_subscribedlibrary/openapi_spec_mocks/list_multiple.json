@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "vCenter Subscriptions Mock",
+    "title": "vCenter Subscribed_Library Mock",
     "version": "9.1.0.0"
   },
   "servers": [
@@ -15,19 +15,10 @@
     }
   ],
   "paths": {
-    "/content/library/{library}/subscriptions": {
+    "/content/subscribed-library": {
       "get": {
-        "operationId": "Content.Library.Subscriptions_list",
-        "parameters": [
-          {
-            "name": "library",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "Content.SubscribedLibrary_list",
+        "parameters": [],
         "responses": {
           "200": {
             "description": "ok",
@@ -36,27 +27,28 @@
                 "schema": {
                   "type": "object"
                 },
-                "example": []
+                "example": [
+                  {
+                    "library_id": "3393956a-43ed-4e7f-bd96-eb39bd604445",
+                    "name": "my_subscribed_library"
+                  },
+                  {
+                    "library_id": "b4c5d6e7-8f90-4a1b-9c2d-3e4f5a6b7c8d",
+                    "name": "remote_templates"
+                  }
+                ]
               }
             }
           }
         }
       }
     },
-    "/content/library/{library}/subscriptions/{subscription}": {
+    "/content/subscribed-library/{library_id}": {
       "get": {
-        "operationId": "Content.Library.Subscriptions_get",
+        "operationId": "Content.SubscribedLibrary_get",
         "parameters": [
           {
-            "name": "library",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "subscription",
+            "name": "library_id",
             "in": "path",
             "required": true,
             "schema": {
@@ -73,7 +65,11 @@
                   "type": "object"
                 },
                 "example": {
-                  "name": "my_subscriptions"
+                  "id": "3393956a-43ed-4e7f-bd96-eb39bd604445",
+                  "name": "my_subscribed_library",
+                  "description": "Mirror of the published library",
+                  "type": "SUBSCRIBED",
+                  "version": "2"
                 }
               }
             }
